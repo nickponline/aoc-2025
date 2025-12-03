@@ -1,9 +1,7 @@
-from typing import List
-
-def read_input(filename: str) -> List[str]:
+def read_input(filename):
     return [line.strip() for line in open(filename, 'r')]
 
-def get_max_joltage(bank: str, index: int, picks: int) -> int:
+def get_max_joltage(bank, index, picks):
     n = len(bank)
     INF = 10**18
     dp = [[-INF] * (picks + 1) for _ in range(n + 1)]
@@ -17,7 +15,7 @@ def get_max_joltage(bank: str, index: int, picks: int) -> int:
     
     return dp[index][picks]
 
-def solve(filename: str, num_batteries: int) -> int:
+def solve(filename, num_batteries):
     return sum([ get_max_joltage(line, 0, num_batteries) for line in read_input(filename) ])
 
 if __name__ == "__main__":
