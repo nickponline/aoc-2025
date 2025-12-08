@@ -1,3 +1,42 @@
+from functools import reduce
+from operator import mul
+
+class DSU:
+    def __init__(self, elements):
+        self.parent = {elem: elem for elem in elements}
+        self.size = {elem: 1 for elem in elements}
+    
+    def find(self, x):
+        if self.parent[x] != x:
+            self.parent[x] = self.find(self.parent[x])
+        return self.parent[x]
+    
+    def union(self, x, y):
+        root_x = self.find(x)
+        root_y = self.find(y)
+        
+        if root_x == root_y:
+            return False
+        
+        if self.size[root_x] < self.size[root_y]:
+            root_x, root_y = root_y, root_x
+        
+        self.parent[root_y] = root_x
+        self.size[root_x] += self.size[root_y]
+        return True
+    
+    def get_component_sizes(self):
+        components = {}
+        for elem in self.parent:
+            root = self.find(elem)
+            if root not in components:
+                components[root] = 0
+            components[root] += 1
+        return sorted(components.values(), reverse=True)
+    
+    def num_components(self):
+        return len(set(self.find(elem) for elem in self.parent))
+
 def read_input(filename):
     with open(filename) as f:
         coordinates = []
@@ -13,109 +52,40 @@ def calculate_distance(coord1, coord2):
     x2, y2, z2 = coord2
     return ((x1 - x2)**2 + (y1 - y2)**2 + (z1 - z2)**2)**0.5
 
+def create_sorted_pairs(coordinates):
+    """Create all pairs of coordinates and sort by distance."""
+    pairs = []
+    for i in range(len(coordinates)):
+        for j in range(i + 1, len(coordinates)):
+            dist = calculate_distance(coordinates[i], coordinates[j])
+            pairs.append((dist, coordinates[i], coordinates[j]))
+    
+    pairs.sort(key=lambda x: x[0])
+    return pairs
+
 def solve_part_1(filename, best_k=1000):
     coordinates = read_input(filename)
-
-    # Create all pairs of coordinates
-    pairs = []
-    for i in range(len(coordinates)):
-        for j in range(i + 1, len(coordinates)):
-            dist = calculate_distance(coordinates[i], coordinates[j])
-            pairs.append((dist, coordinates[i], coordinates[j]))
-    
-    # Sort pairs by distance
-    pairs.sort(key=lambda x: x[0])
-
-
-    # Initialize Union-Find structure
-    parent = {coord: coord for coord in coordinates}
-    size = {coord: 1 for coord in coordinates}
-    
-    def find(coord):
-        if parent[coord] != coord:
-            parent[coord] = find(parent[coord])
-        return parent[coord]
-    
-    def union(coord1, coord2):
-        root1 = find(coord1)
-        root2 = find(coord2)
-        if root1 != root2:
-            if size[root1] < size[root2]:
-                root1, root2 = root2, root1
-            parent[root2] = root1
-            size[root1] += size[root2]
-    
-    # Merge components using best_k closest pairs
+    pairs = create_sorted_pairs(coordinates)
+    dsu = DSU(coordinates)
     for i in range(min(best_k, len(pairs))):
         dist, coord1, coord2 = pairs[i]
-        union(coord1, coord2)
-    
-    # Find all unique components and their sizes
-    components = {}
-    for coord in coordinates:
-        root = find(coord)
-        if root not in components:
-            components[root] = 0
-        components[root] += 1
-    
-    # Print component sizes
-    component_sizes = sorted(components.values(), reverse=True)
-    prod = component_sizes[0] * component_sizes[1] * component_sizes[2]
-    return prod
-    
-    # return component_sizes
+        dsu.union(coord1, coord2)
+    sizes = dsu.get_component_sizes()[:3]
+    return reduce(mul, sizes, 1)
 
-   
-
-    
 def solve_part_2(filename):
     coordinates = read_input(filename)
-
-    # Create all pairs of coordinates
-    pairs = []
-    for i in range(len(coordinates)):
-        for j in range(i + 1, len(coordinates)):
-            dist = calculate_distance(coordinates[i], coordinates[j])
-            pairs.append((dist, coordinates[i], coordinates[j]))
-    
-    # Sort pairs by distance
-    pairs.sort(key=lambda x: x[0])
-    best_k = len(pairs)
-
-    # Initialize Union-Find structure
-    parent = {coord: coord for coord in coordinates}
-    size = {coord: 1 for coord in coordinates}
-    
-    def find(coord):
-        if parent[coord] != coord:
-            parent[coord] = find(parent[coord])
-        return parent[coord]
-    
-    def union(coord1, coord2):
-        root1 = find(coord1)
-        root2 = find(coord2)
-        if root1 != root2:
-            if size[root1] < size[root2]:
-                root1, root2 = root2, root1
-            parent[root2] = root1
-            size[root1] += size[root2]
-    
-    # Merge components using best_k closest pairs
-    for i in range(min(best_k, len(pairs))):
+    pairs = create_sorted_pairs(coordinates)
+    dsu = DSU(coordinates)
+    for i in range(len(pairs)):
         dist, coord1, coord2 = pairs[i]
-        union(coord1, coord2)
-        
-        # Check if everything is in one component
-        num_components = len(set(find(coord) for coord in coordinates))
-        if num_components == 1:
+        dsu.union(coord1, coord2)
+        if dsu.num_components() == 1:
             return coord1[0] * coord2[0]
-    
-  
-
-
+            
 if __name__ == "__main__":
     print(solve_part_1('sample.in', best_k=10))
-    print(solve_part_1('part1.in', best_k=1000))
+    print(solve_part_1('part1.in',  best_k=1000))
     print(solve_part_2('sample.in'))
     print(solve_part_2('part1.in'))
 
