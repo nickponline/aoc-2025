@@ -1,6 +1,7 @@
+from shapely.geometry import Polygon
+from shapely.prepared import prep    
+
 def solve(filename, inscribed=False):
-    from shapely.geometry import Polygon
-    from shapely.prepared import prep
     xy = [tuple(map(int, line.strip().split(','))) for line in open(filename)]
     polygon = Polygon(xy)
     prepared_polygon = prep(polygon)
@@ -15,5 +16,7 @@ def solve(filename, inscribed=False):
             if not inscribed or prepared_polygon.covers(rect):
                 max_area = max(max_area, (max_x - min_x + 1) * (max_y - min_y + 1))
     return max_area
-print(solve('part1.in', inscribed=False))
-print(solve('part1.in', inscribed=True))
+
+if __name__ == "__main__":
+    print(solve('part1.in', inscribed=False))
+    print(solve('part1.in', inscribed=True))
