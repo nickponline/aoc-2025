@@ -288,6 +288,11 @@ def solve(filename, display=False):
             counts[i] * len(shape_variations[i][1][0]) 
             for i in range(len(counts))
         )
+
+        if total_area > width * height:
+            print(f"Line {line_number}/{len(grids)}: False")
+            results.append(False)
+            continue
        
         result = solve_ortools(width, height, counts, shape_variations, display)
         print(f"Line {line_number}/{len(grids)}: {result}")
