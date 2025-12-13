@@ -260,37 +260,46 @@ def create_animation(width, height, counts, shape_variations, placements, line_n
     
     # Calculate layout dimensions
     # Shapes on left, grid on right
+    active_shapes = [(i, shape_variations[i]) for i in range(len(counts)) if counts[i] > 0]
+    
+    if not active_shapes:
+        return
+    
     max_shape_width = max(
         max(dc for dr, dc in variations[0]) - min(dc for dr, dc in variations[0]) + 1
-        for _, variations in shape_variations if variations
+        for _, (_, variations) in active_shapes if variations
     )
     max_shape_height = max(
         max(dr for dr, dc in variations[0]) - min(dr for dr, dc in variations[0]) + 1
-        for _, variations in shape_variations if variations
+        for _, (_, variations) in active_shapes if variations
     )
     
     # Layout: shapes stacked on left, gap, then grid on right
-    num_shapes_used = sum(1 for c in counts if c > 0)
     shapes_total_height = sum(
-        max(dr for dr, dc in shape_variations[i][1][0]) - min(dr for dr, dc in shape_variations[i][1][0]) + 2
+        max(dr for dr, dc in shape_variations[i][1][0]) - min(dr for dr, dc in shape_variations[i][1][0]) + 1
         for i in range(len(counts)) if counts[i] > 0
-    )
+    ) + len(active_shapes) - 1  # Add spacing between shapes
     
-    # Calculate figure size
-    left_margin = max_shape_width + 3
-    total_width = left_margin + width + 2
-    total_height = max(height, shapes_total_height) + 2
+    # Calculate figure size with proper margins
+    left_margin = 2
+    gap = 2
+    right_margin = 2
+    top_margin = 2
+    bottom_margin = 2
+    
+    total_width = left_margin + max_shape_width + gap + width + right_margin
+    total_height = max(height, shapes_total_height) + top_margin + bottom_margin
     
     fig, ax = plt.subplots(figsize=(total_width * 0.8, total_height * 0.8))
-    ax.set_xlim(-1, total_width)
-    ax.set_ylim(-1, total_height)
+    ax.set_xlim(0, total_width)
+    ax.set_ylim(0, total_height)
     ax.set_aspect('equal')
     ax.axis('off')
     fig.patch.set_facecolor('#1a1a2e')
     ax.set_facecolor('#1a1a2e')
     
-    # Grid position (on the right)
-    grid_offset_x = left_margin
+    # Grid position (on the right, centered vertically)
+    grid_offset_x = left_margin + max_shape_width + gap
     grid_offset_y = (total_height - height) / 2
     
     # Draw static grid background
@@ -302,19 +311,26 @@ def create_animation(width, height, counts, shape_variations, placements, line_n
             )
             ax.add_patch(rect)
     
-    # Calculate starting positions for shapes (stacked on left)
+    # Calculate starting positions for shapes (stacked on left, centered vertically)
     shape_start_positions = {}
-    current_y = grid_offset_y + height
-    
-    active_shapes = [(i, shape_variations[i]) for i in range(len(counts)) if counts[i] > 0]
+    current_y = (total_height + shapes_total_height) / 2
     
     for shape_idx, (shape_id, variations) in active_shapes:
         cells = variations[0]
         min_r = min(dr for dr, dc in cells)
         max_r = max(dr for dr, dc in cells)
+        min_c = min(dc for dr, dc in cells)
+        max_c = max(dc for dr, dc in cells)
         shape_h = max_r - min_r + 1
-        current_y -= shape_h + 1
-        shape_start_positions[shape_idx] = (1, current_y)
+        shape_w = max_c - min_c + 1
+        
+        current_y -= shape_h
+        
+        # Center the shape horizontally in the left area
+        shape_x = left_margin + (max_shape_width - shape_w) / 2
+        
+        shape_start_positions[shape_idx] = (shape_x, current_y)
+        current_y -= 1  # Add spacing between shapes
     
     # Animation parameters
     fps = 30
@@ -338,8 +354,8 @@ def create_animation(width, height, counts, shape_variations, placements, line_n
         # Normalize original cells for positioning
         orig_list = list(original_cells)
         orig_min_r = min(r for r, c in orig_list)
-        orig_min_c = min(c for r, c in orig_list)
         orig_max_r = max(r for r, c in orig_list)
+        orig_min_c = min(c for r, c in orig_list)
         
         cell_patches = []
         
@@ -518,7 +534,7 @@ def create_animation(width, height, counts, shape_variations, placements, line_n
     
     # Save as GIF
     filename = f"solution_{line_number}.gif"
-    anim.save(filename, writer='pillow', fps=fps, dpi=100,
+    anim.save(filename, writer='pillow', fps=fps, dpi=72,
               savefig_kwargs={'facecolor': '#1a1a2e'})
     plt.close(fig)
     print(f"Animation saved to {filename}")
@@ -636,9 +652,8 @@ def generate_puzzle(width, height, num_shapes=5, output_file='new.in'):
         f.write(f'{width}x{height}: {" ".join(str(1) for _ in range(num_shapes))}\n')
 
 if __name__ == "__main__":
-    print(solve('sample1.in', display=True))
+    # print(solve('sample1.in', display=True))
     print(solve('part1.in', display=True))
     # for _ in range(10):
     #     generate_puzzle(8, 8, 6)
     #     print(solve('new.in', display=True))
-    
